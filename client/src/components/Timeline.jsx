@@ -6,13 +6,14 @@ import remarkGfm from "remark-gfm";
 const TimelineItem = ({ stepText, index, totalDelay }) => {
   return (
     <motion.div
-      style={{ position: "relative", paddingLeft: "32px", paddingTop: "12px", paddingBottom: "12px" }}
+      style={{ position: "relative", paddingLeft: "24px", paddingTop: "12px", paddingBottom: "12px" }}
+      className="md:pl-8"
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, delay: totalDelay }}
     >
       <motion.div
-        style={{ position: "absolute", left: "-11px", top: "16px" }}
+        style={{ position: "absolute", left: "-10px", top: "16px" }}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 300, delay: totalDelay + 0.2 }}
@@ -33,14 +34,7 @@ const TimelineItem = ({ stepText, index, totalDelay }) => {
         </div>
       </motion.div>
 
-      <div style={{
-        background: "var(--bg-glass)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid var(--border-subtle)",
-        padding: "16px 20px",
-        borderRadius: "var(--radius-lg)",
-        transition: "all 0.25s ease",
-      }}>
+      <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/60 p-4 md:p-5 rounded-2xl transition-all duration-250">
         <div style={{
           fontSize: "13px",
           color: "var(--text-secondary)",
@@ -72,17 +66,12 @@ const TimelineItem = ({ stepText, index, totalDelay }) => {
 export const Timeline = ({ stepsString, initialDelay = 1.2 }) => {
   if (!stepsString) return <p style={{ color: "var(--text-muted)", fontStyle: "italic", marginTop: "8px" }}>No steps provided.</p>;
 
-  const stepsList = stepsString.split('\n')
-    .map(s => s.replace(/^•|-/, '').trim())
+  const stepsList = (Array.isArray(stepsString) ? stepsString : String(stepsString || "").split('\n'))
+    .map(s => typeof s === 'string' ? s.replace(/^•|-/, '').trim() : String(s))
     .filter(s => s.length > 0);
 
   return (
-    <div style={{
-      position: "relative",
-      borderLeft: "2px solid rgba(51,65,85,0.4)",
-      marginLeft: "16px",
-      marginTop: "16px",
-    }}>
+    <div className="relative border-l-2 border-slate-700/40 ml-2 sm:ml-4 mt-4">
       {stepsList.map((step, idx) => (
         <TimelineItem
           key={idx}
