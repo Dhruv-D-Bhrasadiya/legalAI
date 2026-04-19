@@ -80,9 +80,33 @@ const GetStarted = () => {
           cleanText = cleanText.split("```")[1].split("```")[0].trim();
         }
 
+        // Helper function to sanitize text and fix character corruption
+        const sanitizeText = (text) => {
+          if (!text || typeof text !== 'string') return String(text || '');
+          return text
+            .replace(/\\u([0-9a-fA-F]{4})/g, (match, hex) => {
+              try {
+                return String.fromCharCode(parseInt(hex, 16));
+              } catch (e) {
+                return match;
+              }
+            })
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, '\t')
+            .replace(/\\r/g, '\r')
+            .replace(/\\'/g, "'")
+            .trim();
+        };
+
         // Attempt standard parse first
         try {
           parsed = JSON.parse(cleanText);
+          // Sanitize all text fields to fix character corruption
+          Object.keys(parsed).forEach(key => {
+            if (typeof parsed[key] === 'string') {
+              parsed[key] = sanitizeText(parsed[key]);
+            }
+          });
         } catch (initialErr) {
           console.warn("JSON Parse Failed. Engaging Robust Regex Extraction...", initialErr);
 
@@ -92,7 +116,10 @@ const GetStarted = () => {
               return match ? parseInt(match[1]) : null;
             }
             const match = cleanText.match(new RegExp(`"${field}"\\s*:\\s*"(.*?)"(?:\\s*,\\s*"|\\s*})`, 's'));
-            if (match) return match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            if (match) {
+              let value = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+              return sanitizeText(value);
+            }
             return null;
           };
 
@@ -111,7 +138,8 @@ const GetStarted = () => {
 
           const rawMatch = cleanText.match(/"raw"\s*:\s*"(.*)/s);
           if (rawMatch) {
-            parsed.raw = rawMatch[1].replace(/\"\s*}$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            let rawValue = rawMatch[1].replace(/\"\s*}$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            parsed.raw = sanitizeText(rawValue);
           } else {
             parsed.raw = cleanText;
           }
@@ -155,16 +183,20 @@ const GetStarted = () => {
     } catch (err) {
       console.error(err);
       setResult({
-        businessType: "",
-        licenses: "",
-        steps: "",
-        risks: "",
-        cost: "",
+        businessType: "Analysis Error",
+        licenses: "Unable to retrieve",
+        steps: "Unable to retrieve",
+        risks: "Unable to retrieve",
+        cost: "Unable to retrieve",
         riskScore: null,
-        raw: "Something went wrong. Try again."
+        documentComplexity: null,
+        complianceDifficulty: null,
+        timeToCompliance: null,
+        costImpact: null,
+        raw: "❌ API Error: Unable to analyze your business idea.\n\n**Common Issues:**\n- Network timeout (API took too long to respond)\n- Service unavailable\n- Invalid input format\n\nPlease try again or refresh the page. If the issue persists, check that the API server is running."
       });
       setLoading(false);
-      setShowResults(true);
+      setShowResults(true); // Show error message instead of blank screen
     }
 
     // Don't hide loader yet — AILoader will call onStreamComplete
@@ -187,23 +219,82 @@ const GetStarted = () => {
     const date = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
     const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-    const stepsHtml = (result.steps || '').split('\n').filter(s => s.trim()).map((s, i) =>
-      `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#6366f1;font-weight:700;width:40px;text-align:center;">${i+1}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;">${s.replace(/^[\d.•\-)\s]+/, '').trim()}</td></tr>`
-    ).join('');
+    // Helper function to convert citations to clickable links
+    const convertCitationsToLinks = (text) => {
+      // Pattern to match citations like: ([DocumentName, Page X])
+      const citationRegex = /\(\[([^,]+),\s*Page\s*(\d+)\]\)/g;
+      
+      return text.replace(citationRegex, (match, docName, pageNum) => {
+        // Try to find the document in retrievedContext
+        const docContext = retrievedContext.find(ctx => 
+          ctx.source && (
+            ctx.source.toLowerCase().includes(docName.toLowerCase().replace(/\.pdf$/i, '')) ||
+            docName.toLowerCase().includes(ctx.source.toLowerCase().replace(/\.pdf$/i, ''))
+          )
+        );
+        
+        if (docContext && docContext.ref) {
+          const docUrl = `${docContext.ref}#page=${pageNum}`;
+          return `<a href="${docUrl}" style="color:#4f46e5;text-decoration:underline;" target="_blank">([${docName}, Page ${pageNum}])</a>`;
+        }
+        return match;
+      });
+    };
 
-    const risksHtml = (result.risks || '').split('\n').filter(r => r.trim()).map(r =>
-      `<div style="padding:10px 14px;background:#fef2f2;border-left:3px solid #ef4444;border-radius:6px;margin-bottom:8px;color:#991b1b;font-size:13px;">${r.replace(/^[\d.•\-)\s]+/, '').trim()}</div>`
-    ).join('');
+    const stepsHtml = (result.steps || '').split('\n').filter(s => s.trim()).map((s, i) => {
+      // Convert markdown links to HTML links
+      const cleanStep = s.replace(/^[\d.•\-)\s]+/, '').trim();
+      let htmlStep = cleanStep.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;text-decoration:underline;" target="_blank">$1</a>');
+      // Convert citation references to clickable links
+      htmlStep = convertCitationsToLinks(htmlStep);
+      return `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#6366f1;font-weight:700;width:40px;text-align:center;">${i+1}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;">${htmlStep}</td></tr>`;
+    }).join('');
+
+    const risksHtml = (result.risks || '').split('\n').filter(r => r.trim()).map(r => {
+      const cleanRisk = r.replace(/^[\d.•\-)\s]+/, '').trim();
+      let htmlRisk = cleanRisk.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;text-decoration:underline;" target="_blank">$1</a>');
+      // Convert citation references to clickable links
+      htmlRisk = convertCitationsToLinks(htmlRisk);
+      return `<div style="padding:10px 14px;background:#fef2f2;border-left:3px solid #ef4444;border-radius:6px;margin-bottom:8px;color:#991b1b;font-size:13px;">${htmlRisk}</div>`;
+    }).join('');
 
     const licensesHtml = (result.licenses || '').split(',').map(l =>
       `<span style="display:inline-block;padding:6px 14px;background:#eef2ff;color:#4338ca;border-radius:20px;font-size:12px;font-weight:600;margin:4px;">${l.trim()}</span>`
     ).join('');
 
-    const sourcesHtml = retrievedContext.map((ctx, i) =>
-      `<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${i+1}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;">${ctx.ref ? `<a href="${ctx.ref}" style="color:#4f46e5;">${ctx.source}</a>` : ctx.source}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">Page ${ctx.page_number || '?'}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${Math.round((ctx.score || 0) * 100)}%</td></tr>`
-    ).join('');
+    const sourcesHtml = retrievedContext.map((ctx, i) => {
+      // Generate URL with page anchor
+      const pageParam = ctx.page_number ? `#page=${ctx.page_number}` : '';
+      const docUrl = ctx.ref ? `${ctx.ref}${pageParam}` : '#';
+      return `<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${i+1}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;">${ctx.ref ? `<a href="${docUrl}" style="color:#4f46e5;">${ctx.source}</a>` : ctx.source}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">Page ${ctx.page_number || '?'}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${Math.round((ctx.score || 0) * 100)}%</td></tr>`;
+    }).join('');
 
-    const rawHtml = (result.raw || '').replace(/\n/g, '<br/>').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;">$1</a>');
+    // Format raw analysis with better styling and readability
+    const formatRawAnalysis = (text) => {
+      // Convert markdown links to HTML links
+      let formatted = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5; text-decoration:underline;" target="_blank">$1</a>');
+      
+      // Add better paragraph spacing and formatting
+      formatted = formatted
+        .split('\n\n')
+        .map(para => {
+          // Check if paragraph is a list item or numbered point
+          if (para.match(/^[\d.•\-*]/)) {
+            const items = para.split('\n').map(line => {
+              const cleaned = line.replace(/^[\d.•\-*)\s]+/, '').trim();
+              return `<li style="margin-bottom:8px;color:#374151;">${cleaned}</li>`;
+            }).join('');
+            return `<ul style="margin:12px 0 12px 24px;padding:0;">${items}</ul>`;
+          }
+          // Regular paragraphs
+          return `<p style="margin:12px 0;color:#374151;line-height:1.7;">${para.replace(/\n/g, '<br/>')}</p>`;
+        })
+        .join('');
+      
+      return formatted;
+    };
+
+    const rawHtml = formatRawAnalysis(result.raw || '');
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Legal Compliance Report — ${result.businessType}</title>
     <style>body{font-family:'Segoe UI',Arial,sans-serif;max-width:800px;margin:0 auto;padding:40px;color:#111827;line-height:1.6;}
@@ -227,7 +318,7 @@ const GetStarted = () => {
     <h2>📄 Required Licenses & Compliance</h2><div style="margin:12px 0;">${licensesHtml}</div>
     <h2>⚙️ Action Plan</h2><table>${stepsHtml}</table>
     <h2>⚠️ Legal Risks</h2>${risksHtml}
-    <h2>📝 Detailed AI Analysis</h2><div style="background:#f8fafc;padding:20px;border-radius:8px;font-size:13px;color:#374151;line-height:1.8;">${rawHtml}</div>
+    <h2>📝 Detailed AI Analysis</h2><div style="background:linear-gradient(135deg,#f8fafc 0%,#f0f4ff 100%);padding:24px;border-radius:12px;border-left:4px solid #4f46e5;font-size:13px;color:#1f2937;line-height:1.9;">${rawHtml}</div>
     <h2>📚 Referenced Documents (${retrievedContext.length})</h2>
     <table><thead><tr><th>#</th><th>Document</th><th>Page</th><th>Relevance</th></tr></thead><tbody>${sourcesHtml}</tbody></table>
     <div class="footer"><p>Generated by <strong>LexAgent AI</strong> · Powered by Gemini LLM + Qdrant Vector Search</p><p>This report is AI-generated and should be reviewed by a qualified legal professional.</p></div>
@@ -428,7 +519,7 @@ const GetStarted = () => {
           transition={{ duration: 0.5 }}
         >
 
-          {/* ──── TOP ROW: Summary + Gauge ──── */}
+{/* ──── TOP ROW: Summary + Gauge ──── */}
           <div style={{
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: "20px", width: "100%",
@@ -444,12 +535,6 @@ const GetStarted = () => {
               initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <div style={{
-                position: "absolute", top: 0, left: 0,
-                width: "3px", height: "100%",
-                background: "#22d3ee",
-                boxShadow: "0 0 15px #22d3ee",
-              }} />
               <h3 style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 color: "#94a3b8", fontWeight: 600, marginBottom: "10px",
@@ -474,12 +559,6 @@ const GetStarted = () => {
               initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <div style={{
-                position: "absolute", top: 0, left: 0,
-                width: "3px", height: "100%",
-                background: "#34d399",
-                boxShadow: "0 0 15px #34d399",
-              }} />
               <h3 style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 color: "#94a3b8", fontWeight: 600, marginBottom: "10px",
@@ -496,20 +575,20 @@ const GetStarted = () => {
             {/* Risk Assessment Pentagon */}
             <motion.div
               style={{
-                gridColumn: "1 / -1",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "rgba(30,41,59,0.3)",
-                border: "1px solid rgba(51,65,85,0.4)",
+                background: "rgba(30,41,59,0.4)",
+                border: "1px solid rgba(51,65,85,0.5)",
                 borderRadius: "20px",
-                padding: "32px",
+                padding: "12px",
               }}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.5 }}
             >
               <RiskAssessment
+                compact={true}
                 riskMetrics={{
                   riskScore: result.riskScore || 0,
                   documentComplexity: result.documentComplexity || 0,
@@ -691,11 +770,6 @@ const GetStarted = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 + (idx * 0.15) }}
                       >
-                        <div style={{
-                          position: "absolute", left: 0, top: 0,
-                          width: "3px", height: "100%",
-                          background: "rgba(244,63,94,0.4)",
-                        }} />
                         <AlertTriangle style={{ width: "16px", height: "16px", color: "#fb7185", flexShrink: 0, marginTop: "2px" }} />
                         <p style={{ color: "#cbd5e1", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>
                           {risk.replace(/^[\d.•\-)\s]+/, '').trim()}
@@ -790,11 +864,6 @@ const GetStarted = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.1 + (idx * 0.12) }}
                     >
-                      <div style={{
-                        position: "absolute", left: 0, top: 0,
-                        width: "3px", height: "100%",
-                        background: "rgba(244,63,94,0.5)",
-                      }} />
                       <div style={{
                         width: "28px", height: "28px", borderRadius: "8px",
                         background: "rgba(244,63,94,0.1)",
