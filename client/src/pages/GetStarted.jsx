@@ -161,10 +161,14 @@ const GetStarted = () => {
         risks: "",
         cost: "",
         riskScore: null,
-        raw: "Something went wrong. Try again."
+        documentComplexity: null,
+        complianceDifficulty: null,
+        timeToCompliance: null,
+        costImpact: null,
+        raw: "❌ API Error: Unable to analyze your business idea. Please try again or contact support.\n\n**Common Issues:**\n- Network timeout (API took too long to respond)\n- Service unavailable\n- Invalid input\n\nTry submitting a more detailed business description and try again."
       });
       setLoading(false);
-      setShowResults(true);
+      // Don't show results on error - let user retry
     }
 
     // Don't hide loader yet — AILoader will call onStreamComplete
@@ -187,21 +191,29 @@ const GetStarted = () => {
     const date = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
     const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-    const stepsHtml = (result.steps || '').split('\n').filter(s => s.trim()).map((s, i) =>
-      `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#6366f1;font-weight:700;width:40px;text-align:center;">${i+1}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;">${s.replace(/^[\d.•\-)\s]+/, '').trim()}</td></tr>`
-    ).join('');
+    const stepsHtml = (result.steps || '').split('\n').filter(s => s.trim()).map((s, i) => {
+      // Convert markdown links to HTML links
+      const cleanStep = s.replace(/^[\d.•\-)\s]+/, '').trim();
+      const htmlStep = cleanStep.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;" target="_blank">$1</a>');
+      return `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#6366f1;font-weight:700;width:40px;text-align:center;">${i+1}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;">${htmlStep}</td></tr>`;
+    }).join('');
 
-    const risksHtml = (result.risks || '').split('\n').filter(r => r.trim()).map(r =>
-      `<div style="padding:10px 14px;background:#fef2f2;border-left:3px solid #ef4444;border-radius:6px;margin-bottom:8px;color:#991b1b;font-size:13px;">${r.replace(/^[\d.•\-)\s]+/, '').trim()}</div>`
-    ).join('');
+    const risksHtml = (result.risks || '').split('\n').filter(r => r.trim()).map(r => {
+      const cleanRisk = r.replace(/^[\d.•\-)\s]+/, '').trim();
+      const htmlRisk = cleanRisk.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;" target="_blank">$1</a>');
+      return `<div style="padding:10px 14px;background:#fef2f2;border-left:3px solid #ef4444;border-radius:6px;margin-bottom:8px;color:#991b1b;font-size:13px;">${htmlRisk}</div>`;
+    }).join('');
 
     const licensesHtml = (result.licenses || '').split(',').map(l =>
       `<span style="display:inline-block;padding:6px 14px;background:#eef2ff;color:#4338ca;border-radius:20px;font-size:12px;font-weight:600;margin:4px;">${l.trim()}</span>`
     ).join('');
 
-    const sourcesHtml = retrievedContext.map((ctx, i) =>
-      `<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${i+1}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;">${ctx.ref ? `<a href="${ctx.ref}" style="color:#4f46e5;">${ctx.source}</a>` : ctx.source}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">Page ${ctx.page_number || '?'}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${Math.round((ctx.score || 0) * 100)}%</td></tr>`
-    ).join('');
+    const sourcesHtml = retrievedContext.map((ctx, i) => {
+      // Generate URL with page anchor
+      const pageParam = ctx.page_number ? `#page=${ctx.page_number}` : '';
+      const docUrl = ctx.ref ? `${ctx.ref}${pageParam}` : '#';
+      return `<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${i+1}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;">${ctx.ref ? `<a href="${docUrl}" style="color:#4f46e5;">${ctx.source}</a>` : ctx.source}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">Page ${ctx.page_number || '?'}</td><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;">${Math.round((ctx.score || 0) * 100)}%</td></tr>`;
+    }).join('');
 
     const rawHtml = (result.raw || '').replace(/\n/g, '<br/>').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;">$1</a>');
 
