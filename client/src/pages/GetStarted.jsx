@@ -219,16 +219,42 @@ const GetStarted = () => {
     const date = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
     const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
+    // Helper function to convert citations to clickable links
+    const convertCitationsToLinks = (text) => {
+      // Pattern to match citations like: ([DocumentName, Page X])
+      const citationRegex = /\(\[([^,]+),\s*Page\s*(\d+)\]\)/g;
+      
+      return text.replace(citationRegex, (match, docName, pageNum) => {
+        // Try to find the document in retrievedContext
+        const docContext = retrievedContext.find(ctx => 
+          ctx.source && (
+            ctx.source.toLowerCase().includes(docName.toLowerCase().replace(/\.pdf$/i, '')) ||
+            docName.toLowerCase().includes(ctx.source.toLowerCase().replace(/\.pdf$/i, ''))
+          )
+        );
+        
+        if (docContext && docContext.ref) {
+          const docUrl = `${docContext.ref}#page=${pageNum}`;
+          return `<a href="${docUrl}" style="color:#4f46e5;text-decoration:underline;" target="_blank">([${docName}, Page ${pageNum}])</a>`;
+        }
+        return match;
+      });
+    };
+
     const stepsHtml = (result.steps || '').split('\n').filter(s => s.trim()).map((s, i) => {
       // Convert markdown links to HTML links
       const cleanStep = s.replace(/^[\d.•\-)\s]+/, '').trim();
-      const htmlStep = cleanStep.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;" target="_blank">$1</a>');
+      let htmlStep = cleanStep.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;text-decoration:underline;" target="_blank">$1</a>');
+      // Convert citation references to clickable links
+      htmlStep = convertCitationsToLinks(htmlStep);
       return `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#6366f1;font-weight:700;width:40px;text-align:center;">${i+1}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151;">${htmlStep}</td></tr>`;
     }).join('');
 
     const risksHtml = (result.risks || '').split('\n').filter(r => r.trim()).map(r => {
       const cleanRisk = r.replace(/^[\d.•\-)\s]+/, '').trim();
-      const htmlRisk = cleanRisk.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;" target="_blank">$1</a>');
+      let htmlRisk = cleanRisk.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#4f46e5;text-decoration:underline;" target="_blank">$1</a>');
+      // Convert citation references to clickable links
+      htmlRisk = convertCitationsToLinks(htmlRisk);
       return `<div style="padding:10px 14px;background:#fef2f2;border-left:3px solid #ef4444;border-radius:6px;margin-bottom:8px;color:#991b1b;font-size:13px;">${htmlRisk}</div>`;
     }).join('');
 
