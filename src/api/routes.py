@@ -25,7 +25,7 @@ async def analyze_legal(payload: LegalQueryRequest):
     """
     try:
         # Step 1: Retrieve context chunks
-        context_chunks = semantic_search.search_legal_context(query=payload.business_idea, top_k=20)
+        context_chunks = semantic_search.search_legal_context(query=payload.business_idea, top_k=18)
         
         if not context_chunks:
             # Although Qdrant will usually return *something* via cosine similarity, handle edge cases
@@ -35,7 +35,7 @@ async def analyze_legal(payload: LegalQueryRequest):
             )
 
         # Step 2: Query Gemini API avoiding hallucinations with retrieved context
-        llm_answer = llm_service.generate_legal_advice(
+        llm_answer = await llm_service.generate_legal_advice(
             user_idea=payload.business_idea,
             context_chunks=context_chunks
         )
