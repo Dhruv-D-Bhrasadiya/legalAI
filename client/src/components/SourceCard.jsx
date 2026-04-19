@@ -23,12 +23,15 @@ const SourceCard = ({ source, page_number, score, refUrl, textSnippet, index, de
         background: colors.bg,
         border: `1px solid ${colors.border}`,
         overflow: "hidden",
-        transition: "all 0.25s ease",
+        transition: "all 0.01s ease",
       }}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay }}
-      whileHover={{ boxShadow: `0 0 25px ${colors.border}` }}
+      whileHover={{ 
+        boxShadow: `0 0 25px ${colors.border}`,
+        transition: { duration: 0 } // Instant
+      }}
     >
       {/* Main Card Content */}
       <motion.a
@@ -93,30 +96,6 @@ const SourceCard = ({ source, page_number, score, refUrl, textSnippet, index, de
           <ExternalLink style={{ width: "14px", height: "14px", color: "#475569", flexShrink: 0 }} />
         )}
       </motion.a>
-
-      {/* Text Snippet Preview (on hover) */}
-      {textSnippet && (
-        <motion.div
-          style={{
-            borderTop: "1px solid rgba(255,255,255,0.06)",
-            padding: "10px 14px",
-            background: "rgba(0,0,0,0.15)",
-            fontSize: "11px",
-            color: "#cbd5e1",
-            lineHeight: 1.5,
-            maxHeight: "50px",
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitBoxOrient: "vertical",
-            WebkitLineClamp: 2,
-          }}
-          initial={{ opacity: 0, height: 0 }}
-          whileHover={{ opacity: 1, height: "auto" }}
-          transition={{ duration: 0.2 }}
-        >
-          {textSnippet.substring(0, 120)}...
-        </motion.div>
-      )}
     </motion.div>
   );
 };
