@@ -1,10 +1,7 @@
 import { motion } from "framer-motion";
-import { ExternalLink, FileText, Copy, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { ExternalLink, FileText } from "lucide-react";
 
 const SourceCard = ({ source, page_number, score, refUrl, textSnippet, index, delay = 0 }) => {
-  const [copied, setCopied] = useState(false);
-
   const relevance = Math.round((score || 0) * 100);
   const getRelevanceColor = (r) => {
     if (r >= 55) return { bar: "#10b981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.25)" };
@@ -15,32 +12,6 @@ const SourceCard = ({ source, page_number, score, refUrl, textSnippet, index, de
 
   // Clean source name for display
   const displayName = source?.replace(/\.pdf$/i, "").replace(/_/g, " ") || "Unknown";
-
-  // Generate a shareable link with text search and page number
-  const generateSectionLink = () => {
-    if (!refUrl) return "#";
-    
-    // Try to extract a search term from the snippet (first few words)
-    const searchTerm = textSnippet ? textSnippet.split('\n')[0].substring(0, 50).trim() : "";
-    const encodedSearch = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
-    
-    // For PDF viewer with page number and text search support
-    const pdfPageParam = page_number ? `#page=${page_number}${encodedSearch}` : `#page=1${encodedSearch}`;
-    return `${refUrl}${pdfPageParam}`;
-  };
-
-  const handleCopyLink = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const link = generateSectionLink();
-    try {
-      await navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  };
 
   return (
     <motion.div
@@ -61,7 +32,7 @@ const SourceCard = ({ source, page_number, score, refUrl, textSnippet, index, de
     >
       {/* Main Card Content */}
       <motion.a
-        href={refUrl || "#"}
+        href={refUrl ? `${refUrl}${page_number ? `#page=${page_number}` : ''}` : "#"}
         target={refUrl ? "_blank" : undefined}
         rel="noopener noreferrer"
         style={{
@@ -116,33 +87,6 @@ const SourceCard = ({ source, page_number, score, refUrl, textSnippet, index, de
             />
           </div>
         </div>
-
-        {/* Copy Link Button */}
-        {textSnippet && (
-          <button
-            onClick={handleCopyLink}
-            style={{
-              padding: "6px 8px",
-              borderRadius: "6px",
-              border: "1px solid rgba(99,102,241,0.2)",
-              background: copied ? "rgba(16,185,129,0.15)" : "transparent",
-              color: copied ? "#6ee7b7" : "#818cf8",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-              flexShrink: 0,
-            }}
-            title="Copy link to this section"
-          >
-            {copied ? (
-              <CheckCircle2 style={{ width: "14px", height: "14px" }} />
-            ) : (
-              <Copy style={{ width: "14px", height: "14px" }} />
-            )}
-          </button>
-        )}
 
         {/* External link icon */}
         {refUrl && (
