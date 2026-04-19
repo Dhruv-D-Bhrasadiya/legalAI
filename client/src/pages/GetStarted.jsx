@@ -80,9 +80,33 @@ const GetStarted = () => {
           cleanText = cleanText.split("```")[1].split("```")[0].trim();
         }
 
+        // Helper function to sanitize text and fix character corruption
+        const sanitizeText = (text) => {
+          if (!text || typeof text !== 'string') return String(text || '');
+          return text
+            .replace(/\\u([0-9a-fA-F]{4})/g, (match, hex) => {
+              try {
+                return String.fromCharCode(parseInt(hex, 16));
+              } catch (e) {
+                return match;
+              }
+            })
+            .replace(/\\n/g, '\n')
+            .replace(/\\t/g, '\t')
+            .replace(/\\r/g, '\r')
+            .replace(/\\'/g, "'")
+            .trim();
+        };
+
         // Attempt standard parse first
         try {
           parsed = JSON.parse(cleanText);
+          // Sanitize all text fields to fix character corruption
+          Object.keys(parsed).forEach(key => {
+            if (typeof parsed[key] === 'string') {
+              parsed[key] = sanitizeText(parsed[key]);
+            }
+          });
         } catch (initialErr) {
           console.warn("JSON Parse Failed. Engaging Robust Regex Extraction...", initialErr);
 
@@ -92,7 +116,10 @@ const GetStarted = () => {
               return match ? parseInt(match[1]) : null;
             }
             const match = cleanText.match(new RegExp(`"${field}"\\s*:\\s*"(.*?)"(?:\\s*,\\s*"|\\s*})`, 's'));
-            if (match) return match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            if (match) {
+              let value = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+              return sanitizeText(value);
+            }
             return null;
           };
 
@@ -111,7 +138,8 @@ const GetStarted = () => {
 
           const rawMatch = cleanText.match(/"raw"\s*:\s*"(.*)/s);
           if (rawMatch) {
-            parsed.raw = rawMatch[1].replace(/\"\s*}$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            let rawValue = rawMatch[1].replace(/\"\s*}$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+            parsed.raw = sanitizeText(rawValue);
           } else {
             parsed.raw = cleanText;
           }
@@ -155,20 +183,20 @@ const GetStarted = () => {
     } catch (err) {
       console.error(err);
       setResult({
-        businessType: "",
-        licenses: "",
-        steps: "",
-        risks: "",
-        cost: "",
+        businessType: "Analysis Error",
+        licenses: "Unable to retrieve",
+        steps: "Unable to retrieve",
+        risks: "Unable to retrieve",
+        cost: "Unable to retrieve",
         riskScore: null,
         documentComplexity: null,
         complianceDifficulty: null,
         timeToCompliance: null,
         costImpact: null,
-        raw: "❌ API Error: Unable to analyze your business idea. Please try again or contact support.\n\n**Common Issues:**\n- Network timeout (API took too long to respond)\n- Service unavailable\n- Invalid input\n\nTry submitting a more detailed business description and try again."
+        raw: "❌ API Error: Unable to analyze your business idea.\n\n**Common Issues:**\n- Network timeout (API took too long to respond)\n- Service unavailable\n- Invalid input format\n\nPlease try again or refresh the page. If the issue persists, check that the API server is running."
       });
       setLoading(false);
-      // Don't show results on error - let user retry
+      setShowResults(true); // Show error message instead of blank screen
     }
 
     // Don't hide loader yet — AILoader will call onStreamComplete
