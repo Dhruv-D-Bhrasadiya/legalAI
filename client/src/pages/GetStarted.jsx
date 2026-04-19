@@ -587,20 +587,20 @@ const GetStarted = () => {
             {/* Risk Assessment Pentagon */}
             <motion.div
               style={{
-                gridColumn: "1 / -1",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "rgba(30,41,59,0.3)",
-                border: "1px solid rgba(51,65,85,0.4)",
+                background: "rgba(30,41,59,0.4)",
+                border: "1px solid rgba(51,65,85,0.5)",
                 borderRadius: "20px",
-                padding: "32px",
+                padding: "12px",
               }}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.5 }}
             >
               <RiskAssessment
+                compact={true}
                 riskMetrics={{
                   riskScore: result.riskScore || 0,
                   documentComplexity: result.documentComplexity || 0,

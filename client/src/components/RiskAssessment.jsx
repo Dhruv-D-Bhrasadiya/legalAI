@@ -1,7 +1,213 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-const RiskAssessment = ({ riskMetrics }) => {
+// Compact Pentagon Component for side-by-side display
+const CompactPentagon = ({ metrics, defaultMetrics }) => {
+  const stats = [
+    { key: "riskScore", label: "Risk", icon: "⚠️" },
+    { key: "documentComplexity", label: "Doc", icon: "📄" },
+    { key: "complianceDifficulty", label: "Comp", icon: "⚙️" },
+    { key: "timeToCompliance", label: "Time", icon: "⏱️" },
+    { key: "costImpact", label: "Cost", icon: "💰" },
+  ];
+
+  const getStatColor = (key, value) => {
+    if (key === "riskScore") {
+      if (value <= 35) return { bar: "#10b981", text: "#6ee7b7" };
+      if (value <= 70) return { bar: "#f59e0b", text: "#fcd34d" };
+      return { bar: "#ef4444", text: "#fca5a5" };
+    }
+    if (value <= 33) return { bar: "#22d3ee", text: "#67e8f9" };
+    if (value <= 66) return { bar: "#f59e0b", text: "#fcd34d" };
+    return { bar: "#f97316", text: "#fed7aa" };
+  };
+
+  const centerX = 120;
+  const centerY = 120;
+
+  return (
+    <motion.div
+      style={{
+        position: "relative",
+        width: "240px",
+        height: "240px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.6, delay: 0.4 }}
+    >
+      <svg
+        style={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          top: 0,
+          left: 0,
+          zIndex: 1,
+        }}
+        viewBox="0 0 240 240"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <defs>
+          <linearGradient id="compactPentagonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.08" />
+          </linearGradient>
+        </defs>
+
+        {/* Pentagon outline */}
+        <polygon
+          points="120,20 220,70 190,190 50,190 20,70"
+          fill="url(#compactPentagonGradient)"
+          stroke="rgba(99,102,241,0.3)"
+          strokeWidth="1.5"
+        />
+
+        {/* Lines from center to each metric */}
+        {stats.map((stat, index) => {
+          const angle = (index * 360) / 5 - 90;
+          const radius = 80;
+          const x = centerX + radius * Math.cos((angle * Math.PI) / 180);
+          const y = centerY + radius * Math.sin((angle * Math.PI) / 180);
+          const value = metrics[stat.key] || 0;
+          const colors = getStatColor(stat.key, value);
+
+          return (
+            <line
+              key={`line-${index}`}
+              x1={centerX}
+              y1={centerY}
+              x2={x}
+              y2={y}
+              stroke={colors.bar}
+              strokeWidth="1.5"
+              opacity="0.4"
+            />
+          );
+        })}
+
+        {/* Center circle */}
+        <circle
+          cx={centerX}
+          cy={centerY}
+          r="30"
+          fill={
+            defaultMetrics.riskScore <= 35
+              ? "rgba(16,185,129,0.1)"
+              : defaultMetrics.riskScore <= 70
+              ? "rgba(245,158,11,0.1)"
+              : "rgba(239,68,68,0.1)"
+          }
+          stroke={
+            defaultMetrics.riskScore <= 35
+              ? "#10b981"
+              : defaultMetrics.riskScore <= 70
+              ? "#f59e0b"
+              : "#ef4444"
+          }
+          strokeWidth="2"
+        />
+      </svg>
+
+      {/* Center text */}
+      <div style={{ position: "absolute", zIndex: 5, textAlign: "center" }}>
+        <div
+          style={{
+            fontSize: "20px",
+            fontWeight: 800,
+            color:
+              defaultMetrics.riskScore <= 35
+                ? "#6ee7b7"
+                : defaultMetrics.riskScore <= 70
+                ? "#fcd34d"
+                : "#fca5a5",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          {metrics.riskScore || 0}%
+        </div>
+        <div style={{ fontSize: "9px", color: "#94a3b8", fontWeight: 600 }}>RISK</div>
+      </div>
+
+      {/* 5 Stat Points at corners */}
+      {stats.map((stat, index) => {
+        const angle = (index * 360) / 5 - 90;
+        const radius = 80;
+        const x = centerX + radius * Math.cos((angle * Math.PI) / 180);
+        const y = centerY + radius * Math.sin((angle * Math.PI) / 180);
+        const value = metrics[stat.key] || 0;
+        const colors = getStatColor(stat.key, value);
+
+        return (
+          <motion.div
+            key={stat.key}
+            style={{
+              position: "absolute",
+              left: `${x}px`,
+              top: `${y}px`,
+              transform: "translate(-50%, -50%)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 10,
+            }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 + index * 0.08 }}
+          >
+            <motion.div
+              style={{
+                width: "50px",
+                height: "50px",
+                borderRadius: "8px",
+                background: `rgba(99,102,241,0.05)`,
+                border: `1.5px solid ${colors.bar}`,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "1px",
+                boxShadow: `0 0 12px ${colors.bar}30`,
+              }}
+            >
+              <span style={{ fontSize: "1.2rem" }}>{stat.icon}</span>
+              <span
+                style={{
+                  fontSize: "0.9rem",
+                  fontWeight: 700,
+                  color: colors.text,
+                  fontFamily: "var(--font-mono)",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {value}
+              </span>
+            </motion.div>
+            <div
+              style={{
+                marginTop: "4px",
+                textAlign: "center",
+                fontSize: "9px",
+                fontWeight: 600,
+                color: "#64748b",
+                textTransform: "uppercase",
+                letterSpacing: "0.03em",
+              }}
+            >
+              {stat.label}
+            </div>
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+};
+
+const RiskAssessment = ({ riskMetrics, compact = false }) => {
   const [displayMetrics, setDisplayMetrics] = useState({});
 
   // Default metrics structure
@@ -32,6 +238,11 @@ const RiskAssessment = ({ riskMetrics }) => {
       }, Math.max(10, 1500 / (targetValue || 1)));
     });
   }, []);
+
+  // If compact mode, return simplified pentagon with lines from center
+  if (compact) {
+    return <CompactPentagon metrics={displayMetrics} defaultMetrics={defaultMetrics} />;
+  }
 
   // Pentagon stat labels
   const stats = [
