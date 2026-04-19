@@ -53,13 +53,18 @@ INSTRUCTIONS:
 2. If the user's query cannot be answered using the given context, clearly state: "I cannot answer this question based on the provided context." Do not hallucinate or rely on outside knowledge.
 3. Be professional, concise, and highlight specific obligations or laws mentioned.
 4. Provide citations strictly adhering to the CRITICAL CITATION RULE above.
-5. You MUST return your response as a valid JSON object matching exactly this schema. IMPORTANT: You must escape any newlines in your strings using \\n so that JSON.parse() does not fail!
+5. For the "steps" field, provide a detailed, numbered action plan where each step is clear and actionable. Each step should include what needs to be done and why. Format as bullet points with clear descriptions.
+6. You MUST return your response as a valid JSON object matching exactly this schema. IMPORTANT: You must escape any newlines in your strings using \\n so that JSON.parse() does not fail!
 {{
   "businessType": "Short classification of the business",
   "licenses": "Comma separated list of required licenses and compliances",
   "steps": "Bullet points or short text of actionable steps",
   "risks": "Main legal risks involved",
-  "riskScore": Integer between 0 and 100 representing risk severity,
+  "riskScore": Integer between 0 and 100 representing overall risk severity,
+  "documentComplexity": Integer between 0 and 100 (how complex are required documents?),
+  "complianceDifficulty": Integer between 0 and 100 (how difficult is compliance to implement?),
+  "timeToCompliance": Integer between 0 and 100 (how much time is needed, 0=<1 month, 50=6 months, 100=>2 years),
+  "costImpact": Integer between 0 and 100 (cost impact relative to startup budget),
   "cost": "Estimated cost or statement about cost",
   "raw": "A detailed explanation of the legal advice formatted in Markdown"
 }}

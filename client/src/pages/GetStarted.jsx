@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { analyzeLegal } from "../api/api";
+import { getLicenseInfo } from "../utils/licenseLinks";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import AILoader from "../components/AILoader";
 import { motion, AnimatePresence } from "framer-motion";
 import RiskGauge from "../components/RiskGauge";
+import RiskAssessment from "../components/RiskAssessment";
 import Timeline from "../components/Timeline";
 import Typewriter from "../components/Typewriter";
 import SourceCard from "../components/SourceCard";
@@ -30,6 +32,10 @@ const GetStarted = () => {
     risks: "",
     cost: "",
     riskScore: null,
+    documentComplexity: null,
+    complianceDifficulty: null,
+    timeToCompliance: null,
+    costImpact: null,
     raw: ""
   });
 
@@ -96,6 +102,10 @@ const GetStarted = () => {
             steps: extractField("steps"),
             risks: extractField("risks"),
             riskScore: extractField("riskScore", true),
+            documentComplexity: extractField("documentComplexity", true),
+            complianceDifficulty: extractField("complianceDifficulty", true),
+            timeToCompliance: extractField("timeToCompliance", true),
+            costImpact: extractField("costImpact", true),
             cost: extractField("cost")
           };
 
@@ -114,6 +124,11 @@ const GetStarted = () => {
           steps: "Review AI analysis.",
           risks: "Potential non-compliance (Parsing Error)",
           cost: "Consult Legal",
+          riskScore: 50,
+          documentComplexity: 50,
+          complianceDifficulty: 50,
+          timeToCompliance: 50,
+          costImpact: 50,
           raw: text
         };
       }
@@ -125,6 +140,10 @@ const GetStarted = () => {
         risks: parsed.risks || "Standard Legal Risk",
         cost: parsed.cost || "Variable Cost",
         riskScore: parsed.riskScore || null,
+        documentComplexity: parsed.documentComplexity || null,
+        complianceDifficulty: parsed.complianceDifficulty || null,
+        timeToCompliance: parsed.timeToCompliance || null,
+        costImpact: parsed.costImpact || null,
         raw: parsed.raw || text
       });
 
@@ -474,13 +493,31 @@ const GetStarted = () => {
               </p>
             </motion.div>
 
-            {/* Risk Gauge */}
+            {/* Risk Assessment Pentagon */}
             <motion.div
-              style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(30,41,59,0.3)",
+                border: "1px solid rgba(51,65,85,0.4)",
+                borderRadius: "20px",
+                padding: "32px",
+              }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6 }}
             >
-              <RiskGauge score={riskScore} />
+              <RiskAssessment
+                riskMetrics={{
+                  riskScore: result.riskScore || 0,
+                  documentComplexity: result.documentComplexity || 0,
+                  complianceDifficulty: result.complianceDifficulty || 0,
+                  timeToCompliance: result.timeToCompliance || 0,
+                  costImpact: result.costImpact || 0,
+                }}
+              />
             </motion.div>
           </div>
 
@@ -504,27 +541,49 @@ const GetStarted = () => {
               Essential Licenses & Compliance
             </h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-              {result.licenses ? result.licenses.split(',').map((lic, i) => (
-                <motion.div
-                  key={i}
-                  style={{
-                    padding: "10px 20px",
-                    background: "rgba(99,102,241,0.08)",
-                    border: "1px solid rgba(99,102,241,0.25)",
-                    color: "#c7d2fe",
-                    borderRadius: "999px",
-                    fontWeight: 500,
-                    fontSize: "13px",
-                    backdropFilter: "blur(8px)",
-                    boxShadow: "0 0 15px rgba(99,102,241,0.08)",
-                  }}
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", delay: 1.2 + (i * 0.12) }}
-                >
-                  {lic.trim()}
-                </motion.div>
-              )) : <span style={{ color: "#475569" }}>Evaluating...</span>}
+              {result.licenses ? result.licenses.split(',').map((lic, i) => {
+                const licName = lic.trim();
+                const licInfo = getLicenseInfo(licName);
+                return (
+                  <motion.a
+                    key={i}
+                    href={licInfo?.url || "#"}
+                    target={licInfo?.url ? "_blank" : undefined}
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: "10px 20px",
+                      background: licInfo?.url ? "rgba(34,211,238,0.08)" : "rgba(99,102,241,0.08)",
+                      border: licInfo?.url ? "1px solid rgba(34,211,238,0.25)" : "1px solid rgba(99,102,241,0.25)",
+                      color: licInfo?.url ? "#67e8f9" : "#c7d2fe",
+                      borderRadius: "999px",
+                      fontWeight: 500,
+                      fontSize: "13px",
+                      backdropFilter: "blur(8px)",
+                      boxShadow: licInfo?.url ? "0 0 15px rgba(34,211,238,0.08)" : "0 0 15px rgba(99,102,241,0.08)",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.25s ease",
+                      cursor: licInfo?.url ? "pointer" : "default",
+                    }}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", delay: 1.2 + (i * 0.12) }}
+                    whileHover={licInfo?.url ? { scale: 1.05, boxShadow: `0 0 20px rgba(34,211,238,0.15)` } : {}}
+                    title={licInfo?.title || licName}
+                  >
+                    <span>{licName}</span>
+                    {licInfo?.url && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <line x1="10" y1="14" x2="21" y2="3"></line>
+                      </svg>
+                    )}
+                  </motion.a>
+                );
+              }) : <span style={{ color: "#475569" }}>Evaluating...</span>}
             </div>
           </motion.div>
 
@@ -810,6 +869,7 @@ const GetStarted = () => {
                         page_number={ctx.page_number}
                         score={ctx.score}
                         refUrl={ctx.ref}
+                        textSnippet={ctx.text}
                         index={idx}
                         delay={0.05 * idx}
                       />
