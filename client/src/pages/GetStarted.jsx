@@ -13,7 +13,7 @@ import SourceCard from "../components/SourceCard";
 import {
   AlertTriangle, Briefcase, IndianRupee, ShieldCheck,
   BookOpen, Sparkles, Download,
-  FileSearch, Scale, Send
+  FileSearch, Scale, Send, Loader
 } from "lucide-react";
 
 const GetStarted = () => {
@@ -341,6 +341,7 @@ const GetStarted = () => {
   ];
 
   const hasResult = showResults && result.businessType && !loading;
+  const isError = showResults && result.businessType === "Analysis Error";
 
   return (
     <div className="get-started" style={{ minHeight: "100vh" }}>
@@ -1056,6 +1057,58 @@ const GetStarted = () => {
             Download Complete Report
           </motion.button>
 
+        </motion.div>
+      )}
+
+      {/* ══════ ERROR FALLBACK DISPLAY ══════ */}
+      {isError && (
+        <motion.div
+          style={{
+            maxWidth: "700px",
+            margin: "40px auto",
+            padding: "32px",
+            borderRadius: "20px",
+            background: "rgba(220,38,38,0.08)",
+            border: "1px solid rgba(220,38,38,0.3)",
+          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+            <AlertTriangle style={{ width: "24px", height: "24px", color: "#dc2626", flexShrink: 0 }} />
+            <h3 style={{ color: "#dc2626", fontSize: "18px", fontWeight: 700, margin: 0 }}>Analysis Failed</h3>
+          </div>
+          <p style={{ color: "#94a3b8", fontSize: "14px", lineHeight: 1.7, margin: "8px 0" }}>
+            {result.raw || "An error occurred while analyzing your business idea. Please try again or contact support if the issue persists."}
+          </p>
+          <p style={{ color: "#64748b", fontSize: "12px", marginTop: "16px", padding: "12px", background: "rgba(0,0,0,0.3)", borderRadius: "8px", borderLeft: "2px solid #dc2626" }}>
+            <strong>Troubleshooting:</strong> Check your internet connection and try again. If errors persist, the API may be rate-limited.
+          </p>
+        </motion.div>
+      )}
+
+      {/* ══════ BLANK STATE FALLBACK ══════ */}
+      {showResults && !hasResult && !isError && !loading && (
+        <motion.div
+          style={{
+            maxWidth: "700px",
+            margin: "40px auto",
+            padding: "32px",
+            borderRadius: "20px",
+            background: "rgba(99,102,241,0.08)",
+            border: "1px solid rgba(99,102,241,0.3)",
+            textAlign: "center",
+          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+        >
+          <Loader style={{ width: "40px", height: "40px", color: "#6366f1", margin: "0 auto 16px", animation: "spin 2s linear infinite" }} />
+          <h3 style={{ color: "#cbd5e1", fontSize: "18px", fontWeight: 700, margin: "16px 0" }}>Processing Results</h3>
+          <p style={{ color: "#94a3b8", fontSize: "14px", lineHeight: 1.7 }}>
+            Your analysis is being finalized. This should only take a moment...
+          </p>
         </motion.div>
       )}
 
