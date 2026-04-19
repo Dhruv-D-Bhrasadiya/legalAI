@@ -519,7 +519,7 @@ const GetStarted = () => {
           transition={{ duration: 0.5 }}
         >
 
-          {/* ──── TOP ROW: Summary + Gauge ──── */}
+{/* ──── TOP ROW: Summary + Gauge ──── */}
           <div style={{
             display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
             gap: "20px", width: "100%",
@@ -535,12 +535,6 @@ const GetStarted = () => {
               initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <div style={{
-                position: "absolute", top: 0, left: 0,
-                width: "3px", height: "100%",
-                background: "#22d3ee",
-                boxShadow: "0 0 15px #22d3ee",
-              }} />
               <h3 style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 color: "#94a3b8", fontWeight: 600, marginBottom: "10px",
@@ -565,12 +559,6 @@ const GetStarted = () => {
               initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <div style={{
-                position: "absolute", top: 0, left: 0,
-                width: "3px", height: "100%",
-                background: "#34d399",
-                boxShadow: "0 0 15px #34d399",
-              }} />
               <h3 style={{
                 display: "flex", alignItems: "center", gap: "8px",
                 color: "#94a3b8", fontWeight: 600, marginBottom: "10px",
@@ -782,11 +770,6 @@ const GetStarted = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: 0.3 + (idx * 0.15) }}
                       >
-                        <div style={{
-                          position: "absolute", left: 0, top: 0,
-                          width: "3px", height: "100%",
-                          background: "rgba(244,63,94,0.4)",
-                        }} />
                         <AlertTriangle style={{ width: "16px", height: "16px", color: "#fb7185", flexShrink: 0, marginTop: "2px" }} />
                         <p style={{ color: "#cbd5e1", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>
                           {risk.replace(/^[\d.•\-)\s]+/, '').trim()}
@@ -881,11 +864,6 @@ const GetStarted = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.5, delay: 0.1 + (idx * 0.12) }}
                     >
-                      <div style={{
-                        position: "absolute", left: 0, top: 0,
-                        width: "3px", height: "100%",
-                        background: "rgba(244,63,94,0.5)",
-                      }} />
                       <div style={{
                         width: "28px", height: "28px", borderRadius: "8px",
                         background: "rgba(244,63,94,0.1)",
