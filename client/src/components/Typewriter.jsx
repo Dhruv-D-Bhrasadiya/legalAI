@@ -2,39 +2,43 @@ import { useState, useEffect } from "react";
 
 const Typewriter = ({ text, delay = 10, startDelay = 0, onComplete }) => {
   const [displayedText, setDisplayedText] = useState("");
-  const [hasStarted, setHasStarted] = useState(false);
-  const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    // Reset state when text changes
+    // Reset when text changes
     setDisplayedText("");
-    setIndex(0);
-    setHasStarted(false);
 
-    let timeout;
-    if (startDelay > 0) {
-      timeout = setTimeout(() => setHasStarted(true), startDelay);
-    } else {
-      setHasStarted(true);
-    }
-    return () => clearTimeout(timeout);
-  }, [text, startDelay]);
+    let timeoutId;
+    let intervalId;
+    let currentIndex = 0;
 
-  useEffect(() => {
-    if (!hasStarted) return;
-    if (!text) return;
+    const startTyping = () => {
+      if (!text || text.length === 0) {
+        if (onComplete) onComplete();
+        return;
+      }
 
-    if (index < text.length) {
-      const interval = setInterval(() => {
-        setDisplayedText((prev) => prev + text.charAt(index));
-        setIndex((prevIndex) => prevIndex + 1);
+      intervalId = setInterval(() => {
+        if (currentIndex < text.length) {
+          setDisplayedText((prev) => prev + text.charAt(currentIndex));
+          currentIndex++;
+        } else {
+          clearInterval(intervalId);
+          if (onComplete) onComplete();
+        }
       }, delay);
-      
-      return () => clearInterval(interval);
+    };
+
+    if (startDelay > 0) {
+      timeoutId = setTimeout(startTyping, startDelay);
     } else {
-      if (onComplete) onComplete();
+      startTyping();
     }
-  }, [hasStarted, index, text, delay, onComplete]);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [text, delay, startDelay, onComplete]);
 
   return <span>{displayedText}</span>;
 };
